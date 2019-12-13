@@ -58,7 +58,7 @@ def column_words(solution, width):
     [('te', 'xt'), ('st', 'ar')]
     """
     for col in range(width):
-        yield tuple(solution[i][col] for i in range(0, len(solution)))
+        yield tuple(row[col] for row in solution)
 
 
 def has_valid_column_prefixes(solution, column_prefixes, width):
