@@ -37,7 +37,7 @@ def spaced_out_words_of_right_length(paired_words, length):
     for word in paired_words:
         spaces_needed = length - len(word)
         if 1 <= spaces_needed <= half_length:
-            yield from spaced_out(word, '  ', spaces_needed)
+            yield from sorted(spaced_out(word, '  ', spaces_needed))
 
 
 def prefixes(words):
@@ -158,9 +158,12 @@ def main(args):
         max_word_length = 2 * (max(args.width, args.height) - 1)
         lower_cased = (word.strip().lower() for word
                        in args.words_file.readlines())
-        paired_words = set(to_pairs(word) for word in lower_cased
-                         if len(word) % 2 == 0 and len(word) <= max_word_length)
+        paired_words = list(sorted(set(to_pairs(word) for word in lower_cased
+                         if len(word) % 2 == 0 and len(word) <= max_word_length)))
         verbose('Total words selected from file file', len(paired_words))
+        if args.randomise:
+            import random
+            random.shuffle(paired_words)
         find_word_square(paired_words, args.width, args.height)
 
 
@@ -177,6 +180,8 @@ if __name__ == '__main__':
     parser.add_argument('--height', type=int, default=3)
     parser.add_argument('--verbose', action='store_true')
     parser.add_argument('--profile', action='store_true')
+    parser.add_argument('--randomise', action='store_true',
+                        help='randomise word order when searching')
 
     args = parser.parse_args()
 
