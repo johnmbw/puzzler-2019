@@ -2,18 +2,20 @@
 
 import argparse
 
-from itertools import cycle, permutations
+from itertools import cycle, combinations
 
 
 def spaced_out(sequence, space, num_spaces, output_type=tuple):
     """
-    >>> list(sorted(spaced_out('test', ' ', 2, ''.join)))
+    >>> list(spaced_out('test', ' ', 2, ''.join))
     ['  test', ' t est', ' te st', ' tes t', ' test ', 't  est', 't e st', 't es t', 't est ', 'te  st', 'te s t', 'te st ', 'tes  t', 'tes t ', 'test  ']
     """
-    item = cycle(sequence).__next__
-    spaces_and_items = ([item] * len(sequence)) + ([lambda: space] * num_spaces)
-    for combination in set(permutations(spaces_and_items, len(spaces_and_items))):
-        yield output_type(i() for i in combination)
+    total_len = len(sequence) + num_spaces
+    space_positions = combinations(range(total_len), num_spaces)
+    for positions in space_positions:
+        positions = set(positions)
+        seq_iter = iter(sequence)
+        yield output_type(next(seq_iter) if i not in positions else space for i in range(total_len))
 
 
 def to_pairs(word):
@@ -30,14 +32,14 @@ def despace(paired_word):
 
 def spaced_out_words_of_right_length(paired_words, length):
     """
-    >>> list(sorted(spaced_out_words_of_right_length([('te', 'st'), ('hi',), ('lo', 'ng', 'er')], 3)))
+    >>> list(spaced_out_words_of_right_length([('te', 'st'), ('hi',), ('lo', 'ng', 'er')], 3))
     [('  ', 'te', 'st'), ('te', '  ', 'st'), ('te', 'st', '  ')]
     """
     half_length = length // 2
     for word in paired_words:
         spaces_needed = length - len(word)
         if 1 <= spaces_needed <= half_length:
-            yield from sorted(spaced_out(word, '  ', spaces_needed))
+            yield from spaced_out(word, '  ', spaces_needed)
 
 
 def prefixes(words):
