@@ -2,6 +2,7 @@
 
 import argparse
 
+from collections import defaultdict
 from itertools import cycle, combinations
 
 
@@ -42,14 +43,39 @@ def spaced_out_words_of_right_length(paired_words, length):
             yield from spaced_out(word, '  ', spaces_needed)
 
 
-def prefixes(words):
+def build_next_prefixes(words):
     """
-    >>> list(sorted(set(prefixes(['test', 'testing']))))
-    ['t', 'te', 'tes', 'test', 'testi', 'testin', 'testing']
+    >>> next_prefixes = build_next_prefixes(['test', 'text'])
+    >>> next_prefixes == {'t': {'e'},
+    ...                   'te': {'x', 's'},
+    ...                   'tes': {'t'},
+    ...                   'tex': {'t'}}
+    True
     """
+    next_prefixes = defaultdict(set)
+    for word in words:
+        for i in range(0, len(word)-1):
+            prefix, next_prefix = word[0:i+1], word[i+1]
+            next_prefixes[prefix].add(next_prefix)
+    return next_prefixes
+
+
+def build_infix_positions(words):
+    """
+    >>> infix_positions = build_infix_positions(['test', 'text'])
+    >>> infix_positions == {(0, 't'): {'text', 'test'},
+    ...                     (1, 'e'): {'text', 'test'},
+    ...                     (2, 's'): {'test'},
+    ...                     (2, 'x'): {'text'},
+    ...                     (3, 't'): {'text', 'test'}}
+    True
+    """
+    infix_positions = defaultdict(set)
     for word in words:
         for i in range(0, len(word)):
-            yield word[0:i+1]
+            infix = word[i]
+            infix_positions[(i, infix)].add(word)
+    return infix_positions
 
 
 def column_words(solution, width):
@@ -61,22 +87,6 @@ def column_words(solution, width):
     """
     for col in range(width):
         yield tuple(row[col] for row in solution)
-
-
-def has_valid_column_prefixes(solution, column_prefixes, width):
-    """
-    >>> column_prefixes = {('te',), ('te', 'st'), ('st',), ('st', 'ar')}
-    >>> has_valid_column_prefixes([('te', 'st'), ('st', 'ar')], column_prefixes, 2)
-    True
-    >>> has_valid_column_prefixes([('te', 'st')], column_prefixes, 2)
-    True
-    >>> has_valid_column_prefixes([('te', 'st'), ('st', 'ay')], column_prefixes, 2)
-    False
-    """
-    for column_word in column_words(solution, width):
-        if column_word not in column_prefixes:
-            return False
-    return True
 
 
 def extract_words(solution, width):
@@ -104,20 +114,57 @@ def has_duplicate_words(solution, width):
     words = list(extract_words(solution, width))
     return len(words) != len(set(words))
 
+from functools import reduce
+def possible_next_words_at_position(infix_positions, prefixes, i):
+    """
+    >>> infix_positions = build_infix_positions(['test', 'text', 'tag', 'tig', 'tog'])
+    >>> next_words = possible_next_words_at_position(infix_positions, ['a', 'e'], 1)
+    >>> next_words == {'tag', 'test', 'text'}
+    True
+    """
+    possible = set()
+    for prefix in prefixes:
+        possible.update(infix_positions[(i, prefix)])
+    return possible
 
-def backtrack(previous, row_words, column_prefixes, width, height):
-    for row in row_words:
-        if row in previous:
-            continue
-        current = previous + [row]
-        if has_valid_column_prefixes(current, column_prefixes, width):
-            if len(current) == height:
-                if has_duplicate_words(current, width):
-                    verbose("Skipping as has duplicate words")
-                    continue
-                yield current
-            else:
-                yield from backtrack(current, row_words, column_prefixes, width, height)
+
+def possible_next_words(column_next_prefixes, row_infix_positions, prefixes):
+    """
+    >>> next_prefixes = build_next_prefixes(['hat', 'are', 'dis', 'bit'])
+    >>> infix_positions = build_infix_positions(['test', 'text', 'tag', 'tig', 'tog'])
+    >>> next_words = possible_next_words(next_prefixes, infix_positions, ['ha', 'ar', 'di', 'bi'])
+    >>> next_words == {'test'}
+    True
+    >>> next_words = possible_next_words(next_prefixes, infix_positions, ['h', 'a', 'd', 'b'])
+    >>> next_words == set()
+    True
+    """
+    next_prefixes = (column_next_prefixes[prefix] for prefix in prefixes)
+    for i, prefixes in enumerate(next_prefixes):
+        next_possible = possible_next_words_at_position(row_infix_positions, prefixes, i)
+        if i == 0:
+            possible_words = next_possible
+        else:
+            possible_words.intersection_update(next_possible)
+        if len(possible_words) == 0:
+            break
+    return possible_words
+
+
+def backtrack(solution, column_next_prefixes, row_infix_positions, width, height):
+    if len(solution) == height:
+        if has_duplicate_words(solution, width):
+             verbose("Skipping as has duplicate words")
+             return
+        else:
+            yield solution
+
+    prefixes = column_words(solution, width)
+    possible_words = possible_next_words(column_next_prefixes, row_infix_positions, prefixes)
+
+    for word in sorted(possible_words):
+        next_solution = solution + [word]
+        yield from backtrack(next_solution, column_next_prefixes, row_infix_positions, width, height)
 
 
 def find_word_square(paired_words, width, height):
@@ -140,18 +187,14 @@ def find_word_square(paired_words, width, height):
     verbose('Considering', len(row_words), 'word + space combinations for rows')
     verbose('Considering', len(column_words), 'word + space combinations for columns')
 
-    column_prefixes = set(prefixes(column_words))
+    column_next_prefixes = build_next_prefixes(column_words)
+    row_infix_positions = build_infix_positions(row_words)
 
-    verbose(len(column_prefixes), 'word + space prefixes')
-
-    for solution in backtrack([], row_words, column_prefixes, width, height):
-        words = list(extract_words(solution, width))
-        if len(words) != len(set(words)):
-            verbose("Skipping as had duplicate words")
-            continue
-        for row in solution:
-            print(''.join(row))
-        return
+    for word in row_words:
+        for solution in backtrack([word], column_next_prefixes, row_infix_positions, width, height):
+            for row in solution:
+                print(''.join(row))
+            return
 
 
 def main(args):
