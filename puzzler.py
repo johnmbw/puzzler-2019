@@ -219,12 +219,14 @@ def verbose(*arg, **kw):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--self-test', action='store_true')
+    parser.add_argument('--self-test', action='store_true',
+                        help='run doc tests')
     parser.add_argument('--words-file', type=argparse.FileType('r'), default='/usr/share/dict/words')
     parser.add_argument('--width', type=int, default=3)
     parser.add_argument('--height', type=int, default=3)
     parser.add_argument('--verbose', action='store_true')
-    parser.add_argument('--profile', action='store_true')
+    parser.add_argument('--profile', action='store_true',
+                        help='run with profiling enabled')
     parser.add_argument('--randomise', action='store_true',
                         help='randomise word order when searching')
 
