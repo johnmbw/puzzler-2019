@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
     if args.self_test:
         import doctest
-        doctest.testmod(verbose=True)
+        doctest.testmod(verbose=args.verbose)
     else:
         if args.verbose:
             verbose = print

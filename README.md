@@ -100,6 +100,28 @@ user	0m20.542s
 sys	0m0.985s
 ```
 
+Running tests:
+```
+$ ./puzzler.py --self-test --verbose
+Trying:
+    infix_positions = build_infix_positions(['test', 'text'])
+Expecting nothing
+ok
+Trying:
+    infix_positions == {(0, 't'): {'text', 'test'},
+                        (1, 'e'): {'text', 'test'},
+                        (2, 's'): {'test'},
+                        (2, 'x'): {'text'},
+                        (3, 't'): {'text', 'test'}}
+Expecting:
+    True
+ok
+...
+27 tests in 16 items.
+27 passed and 0 failed.
+Test passed.
+```
+
 ## How it works
 
 This is a fairly brute force algorithm, but does do some smartish things.
